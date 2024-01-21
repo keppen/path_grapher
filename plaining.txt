@@ -1,0 +1,7 @@
+Factory
+
+main:
+  - choose potential representaion
+  - chooce minimize function
+  - choose path finding
+  - 
