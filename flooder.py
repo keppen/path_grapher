@@ -32,7 +32,8 @@ class Flodder(Decorator):
         self._init_flood(start_idx)
         self.fill()
 
-        for end_idx in self.pot_obj.min_list:
+        for end_point in self.pot_obj.min_list:
+            end_idx = end_point.idx
             if end_idx == start_idx:
                 continue
             path = self.follow_path(start_idx, end_idx)

@@ -63,54 +63,48 @@ class client:
         print("Linespaces: ", linspaces)
         mesh = np.meshgrid(*[np.linspace(*_)
                            for _ in linspaces], indexing="ij")
+
+        ########################################################
+
         pot_obj = Potential(linspaces, f(*mesh))
         print("Created pot_obj")
 
         print(pot_obj.operate())
 
+        ########################################################
+
         minimizer = Point_Search.from_gradient(
             pot_obj,
         )
-        print("Created minimizer")
         minimizer = minimizer.operate()
+        print(f"minima minimizer: {[i.idx for i in minimizer.min_list]}")
 
-        print(f"minima: {minimizer.min_list}")
+        ########################################################
+
         flooder = Flodder(minimizer)
         print(("Created flooder"))
+
+        print(f"minima flooder: {[i.idx for i in flooder.pot_obj.min_list]}")
+
         for min in flooder.pot_obj.min_list:
-            print(f"minimum : {min}")
-            flooder.flood(min)
+            min_idx = min.idx
+            print(f"minimum : {min_idx}")
+            flooder.flood(min_idx)
+
+        flooder = flooder.operate()
         flooder.remove_excess_paths()
-        path = flooder.pot_obj.path_list
+        flooder.init_graph()
 
-        from collections_objects import Graph
+        print(flooder.graph)
 
-        graph = Graph()
-        for min in flooder.pot_obj.min_list:
-            graph.append(flooder.pot_obj.idx_to_Point(min))
-
-        for p in path:
-            ps, pe = p.ends
-            ps_idx = graph.idx.index(ps.idx)
-            pe_idx = graph.idx.index(pe.idx)
-            weight = p.activation_energy(ps)
-            graph.add_edge(ps_idx, pe_idx, weight)
-            ps_idx, pe_idx = pe_idx, ps_idx
-            weight = p.activation_energy(pe)
-            graph.add_edge(ps_idx, pe_idx, weight)
-        print(graph.pot, pe.pot, ps.pot)
-
-        print(graph)
-        flooder_1 = flooder.operate()
-
-        plotter = Plotter(flooder_1)
+        plotter = Plotter(flooder)
         print("Created plotter")
 
+        path = flooder.path_list
         plotter.suface_path_2D(
             path,
             name="refined",
         )
-        print(flooder_1.min_list)
         test = []
         for p in path:
             test.extend(p.idx)
@@ -120,7 +114,7 @@ class client:
         # for p in path:
         #     print(p.idx)
         plotter.suface_points_2D(
-            flooder_1.min_list,
+            flooder.min_list,
             name="minimia",
         )
 

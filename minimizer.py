@@ -77,14 +77,15 @@ class Minimize:
 
     def operate(self):
         start_points = self.start_points
+        min_list = []
         for i in range(self.nwalkers):
             min_idx = self.minimize(start_points[i])
-            self.pot_obj._min_list.append(min_idx)
+            min_list.append(min_idx)
 
-        self.pot_obj._min_list = set(self.pot_obj._min_list)
+        min_list = set(min_list)
+
         self.pot_obj._min_list = [
-            self.pot_obj.idx_to_Point(idx) for idx in self.pot_obj._min_list
-        ]
+            self.pot_obj.idx_to_Point(i) for i in min_list]
 
         return self.pot_obj
 

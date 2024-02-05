@@ -39,18 +39,18 @@ class Interface(ABC):
     def from_npz(cls, *args, **kargs):
         ...
 
-    def _init_redundancy(self):
+    def __init_redundancy(self):
         self.redundant = []
         self.npaths = len(self.path_list)
         self.path_idx = list(range(self.npaths))
 
-    def _del_redundancy(self):
+    def __del_redundancy(self):
         del self.redundant
         del self.npaths
         del self.path_idx
 
-    def _remove_composites(self):
-        self._init_redundancy()
+    def __remove_composites(self):
+        self.__init_redundancy()
         for i, j in product(self.path_idx, repeat=2):
             if i in self.redundant or j in self.redundant:
                 continue
@@ -67,30 +67,30 @@ class Interface(ABC):
                     continue
                 self.redundant.append(j)
 
-    def _remove_duplicates(self):
-        self._init_redundancy()
+    def __remove_duplicates(self):
+        self.__init_redundancy()
         for i, j in combinations(self.path_idx, 2):
             if self.path_list[i] in self.path_list[j]:
                 self.redundant.append((i, j))
         self.redundant = [i for i, j in self.redundant]
 
-    def _pop_form_paths(self):
+    def __pop_form_paths(self):
         self.redundant.sort(reverse=True)
         for idx in self.redundant:
             self._path_list.pop(idx)
 
     def remove_excess_paths(self):
         print("Removing composite paths...")
-        self._remove_composites()
-        self._pop_form_paths()
+        self.__remove_composites()
+        self.__pop_form_paths()
 
         print("Removing duplicate paths...")
-        self._remove_duplicates()
-        self._pop_form_paths()
+        self.__remove_duplicates()
+        self.__pop_form_paths()
 
-        self._del_redundancy()
+        self.__del_redundancy()
 
-    def _init_graph(self):
+    def init_graph(self):
         for min in self.min_list:
             self._graph.append(min)
 
@@ -98,8 +98,23 @@ class Interface(ABC):
             ends = path.ends
             ends_idx = [self.graph.idx.index(i.idx) for i in ends]
             self._graph.add_edge(
-                ends_idx[0], ends_idx[1], path.activation_energy(ends[0])
+                ends_idx[0], ends_idx[1], path.point_max_difference(ends[0])
             )
             self._graph.add_edge(
-                ends_idx[1], ends_idx[0], path.activation_energy(ends[1])
+                ends_idx[1], ends_idx[0], path.point_max_difference(ends[1])
             )
+
+    def __partition_function(self, microstates):
+        import math
+
+        temp = 300
+        k_boltz = 1.380649e-23
+        kcal = 4.1868
+
+        partition_function = 0
+        for microstate in microstates:
+            partition_function += math.exp(-microstate / k_boltz / temp / kcal)
+
+    def __change_prob(self, node_idx):
+        ends_points = [self.graph[i] for i, _ in self.graph.edges[node_idx]]
+        ...

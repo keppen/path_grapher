@@ -105,7 +105,7 @@ class Path(collections.abc.MutableSequence):
         else:
             raise AttributeError(attribute_name)
 
-    def activation_energy(self, point: Point):
+    def point_max_difference(self, point: Point):
         return max(self.pot) - point.pot
 
     def __repr__(self):
@@ -124,6 +124,10 @@ class Graph:
     @property
     def nodes_idx(self):
         return list(range(len(self.__nodes)))
+
+    @property
+    def edges(self):
+        return self.__adj_list
 
     def __getitem__(self, index):
         return self.__nodes[index]
@@ -162,39 +166,44 @@ class Graph:
 
         return msg
 
-    def add_edge(self, origin_idx, destination_idx, weight):
-        self.__adj_list[origin_idx].append([destination_idx, weight])
+    def add_edge(self, origin_idx, destination_idx):
+        self.__adj_list[origin_idx].append([destination_idx, 0])
 
-    def BFS(self, node, border=list()):
-        """Breath First Search walker. A generator.
-        A border is an atom not added to queue,
-        it makes walker stop searching beyond it.
+    def add_weight(self, origin_idx, destination_idx, weight):
+        for i, adjacent in enumerate(self.__adj_list[origin_idx]):
+            if adjacent[0] == destination_idx:
+                self.__adj_list[origin_idx][i] = [destination_idx, weight]
 
-        Parameters:
-            node (dict): an atom
-            border: an list of atoms
-
-        Yields:
-            node_path (list): [atom, [list of atoms ids]] -> [node, path]
-        """
-        path = [node["id"]]
-        node_path = [node, path]
-        queue = [node_path]
-        while queue:
-            node, path = queue.pop(0)
-            node["visited"] = True
-            for neighbor in node["bonds"]:
-                # neighbor = self._findbyID(neighbor)
-                node_path = [neighbor, path + [neighbor["id"]]]
-                if not neighbor["visited"]:
-                    if neighbor["id"] in border:
-                        # print('found border', neighbor)
-                        neighbor["visited"] = True
-                        yield node_path
-                        continue
-                    yield node_path
-
-                    queue.append(node_path)
+    # def BFS(self, node, border=list()):
+    #     """Breath First Search walker. A generator.
+    #     A border is an atom not added to queue,
+    #     it makes walker stop searching beyond it.
+    #
+    #     Parameters:
+    #         node (dict): an atom
+    #         border: an list of atoms
+    #
+    #     Yields:
+    #         node_path (list): [atom, [list of atoms ids]] -> [node, path]
+    #     """
+    #     path = [node["id"]]
+    #     node_path = [node, path]
+    #     queue = [node_path]
+    #     while queue:
+    #         node, path = queue.pop(0)
+    #         node["visited"] = True
+    #         for neighbor in node["bonds"]:
+    #             # neighbor = self._findbyID(neighbor)
+    #             node_path = [neighbor, path + [neighbor["id"]]]
+    #             if not neighbor["visited"]:
+    #                 if neighbor["id"] in border:
+    #                     # print('found border', neighbor)
+    #                     neighbor["visited"] = True
+    #                     yield node_path
+    #                     continue
+    #                 yield node_path
+    #
+    #                 queue.append(node_path)
 
     def Dijkstra(self, start):
         """
