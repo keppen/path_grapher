@@ -1,0 +1,226 @@
+import numpy as np
+from itertools import product
+
+
+class Grid:
+    def __init__(self, linespaces):
+        self._shape = tuple([_[2] for _ in linespaces])
+        self._ranges = tuple([(_[0], _[1]) for _ in linespaces])
+        self._dim = len(self.shape)
+        self._shape_offsets = self._init_shape_offsets(self.shape)
+        self._axis_arrays = self._init_axis_arrays(linespaces)
+        self._neighbor_offsets = self._init_neighbor_offsets(self.dim)
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def ranges(self):
+        return self._ranges
+
+    @property
+    def dim(self):
+        return self._dim
+
+    @property
+    def nnodes(self):
+        nnodes = 1
+        for number in self.shape:
+            nnodes *= number
+        return nnodes
+
+    @property
+    def shape_offsets(self):
+        return self._shape_offsets
+
+    @property
+    def axis_arrays(self):
+        return self._axis_arrays
+
+    @property
+    def neighbors_offsets(self):
+        return self._neighbor_offsets
+
+    @property
+    def linespaces(self):
+        """
+        Grid may me initalized by classmethod.
+        That way grid is not defined linespace explicitly.
+
+        So that makes it possible to get grid.linespaces
+        as if self.linespaces were defiend.
+
+        @property defines a getter. It is decorator which
+        produces __get__, __set__ etc. methods. So it is descriptor.
+        """
+        linespaces = []
+        ranges = self.ranges
+        for i, number in enumerate(self.shape):
+            start, stop = ranges[i]
+            linespaces.append((start, stop, number))
+        return tuple(linespaces)
+
+    @staticmethod
+    def _init_shape_offsets(shape):
+        offsets = []
+        dim = len(shape)
+        for i in range(dim):
+            offset = 1
+            for j in range(i + 1, dim):
+                offset *= shape[j]
+            offsets.append(offset)
+        return tuple(offsets)
+
+    @staticmethod
+    def _init_axis_arrays(linespaces):
+        axis_arrays = []
+        dim = len(linespaces)
+        base_shape = [1] * dim
+        for i in range(dim):
+            a_array = np.linspace(*(linespaces[i]))
+            array_shape = base_shape[:]
+            array_shape[i] = linespaces[i][2]
+            axis_arrays.append(a_array.reshape(array_shape))
+        return tuple(axis_arrays)
+
+    @staticmethod
+    def _init_neighbor_offsets(dim):
+        s = (-1, 0, 1)
+        neighbour_offsets = list(product(s, repeat=dim))
+        to_pop = neighbour_offsets.index(tuple([0] * dim))
+        neighbour_offsets.pop(to_pop)
+        return np.array(neighbour_offsets)
+
+    @classmethod
+    def from_nnodes(cls, nnodes, ranges, weights=None):
+        """
+        Create grid object from the number of points.
+        Weights may manipulate size of grid vectors.
+
+        sum(weights) == 1
+        """
+        dim = len(ranges)
+        if not weights:
+            weights = [1] * dim
+        weights = np.array(weights)
+        numbers = np.copy(weights)
+        while nnodes > np.prod(numbers):
+            numbers += weights
+
+        linespaces = [[ranges[_][0], ranges[_][1], numbers[_]] for _ in range(dim)]
+        return cls(linespaces)
+
+    @classmethod
+    def from_ranges(cls, ranges, resolutions):
+        """
+        Create grid object from the start and stop.
+        Weights may manipulate size of grid vectors.
+        """
+        from math import floor
+
+        linespaces = []
+
+        for start, limit, resolution in zip(ranges, resolutions):
+            if start > limit:
+                start, limit = limit, start
+            number = abs(floor((limit - start) / float(resolution)))
+            stop = start + number * resolution
+            linespaces.append(start, stop, number)
+
+    def cart_to_grid(self, cart):
+        grid = []
+        for i in range(self.dim):
+            axis_array = self.axis_arrays[i].ravel()
+            grid.append(np.argmin(abs(axis_array - cart[i])))
+        return tuple(grid)
+
+    def grid_to_idx(self, grid):
+        return sum([point * offset for point, offset in zip(grid, self.shape_offsets)])
+
+    def idx_to_grid(self, idx):
+        grid = []
+        reminder = idx
+        for offset in self.shape_offsets:
+            quotient, reminder = divmod(reminder, offset)
+            grid.append(quotient)
+        return tuple(grid)
+
+    def grid_to_cart(self, grid):
+        return tuple(
+            [float(self.axis_arrays[i].ravel()[j]) for i, j in enumerate(grid)]
+        )
+
+    def neighbors_from_grid(self, grid):
+        neighbors = grid + self.neighbors_offsets
+        return [
+            self.grid_to_idx(n)
+            for n in neighbors[
+                np.all((self.shape > neighbors) & (neighbors >= 0), axis=1)
+            ]
+        ]
+
+    def neighbors_from_idx(self, idx):
+        return self.neighbors_from_grid(self.idx_to_grid(idx))
+
+
+class Potenetial(Grid):
+    def __init__(self, potential):
+        self.pot_1D = potential
+
+    def read_potential(self):
+        pass
+
+    def from_linespace(self):
+        pass
+
+    def from_axis_array(self):
+        pass
+
+    def copy_potential(self):
+        pass
+
+    def to_multimdim(self):
+        pass
+
+    def surface_smoothing(self):
+        pass
+
+
+if __name__ == "__main__":
+    """
+    [..., z, y, x]
+    """
+    linespaces = [[0, 10, 10], [0, 10, 10]]
+    grid = Grid(linespaces)
+    assert grid.shape == (10, 10)
+    assert grid.ranges == ((0, 10), (0, 10))
+    assert grid.dim == 2
+    # print(grid.shape_offsets)
+    assert grid.shape_offsets == (10, 1)
+    assert grid.linespaces == ((0, 10, 10), (0, 10, 10))
+    # print(grid.axis_arrays)
+    assert grid.nnodes == 100
+    # print(grid.neighbors_offsets)
+
+    nnodes = 200
+    ranges = [[0, 10], [0, 10]]
+    weights = [1, 2]
+    grid = Grid.from_nnodes(nnodes, ranges, weights)
+    assert grid.shape == (10, 20)
+    assert grid.ranges == ((0, 10), (0, 10))
+    assert grid.dim == 2
+    assert grid.shape_offsets == (20, 1)
+    assert grid.linespaces == ((0, 10, 10), (0, 10, 20))
+    assert grid.nnodes == 200
+
+    assert grid.cart_to_grid((2, 2)) == (2, 4)
+    assert grid.grid_to_idx((3, 3)) == 63
+    assert grid.idx_to_grid((41)) == (2, 1)
+    # print(
+    #     grid.grid_to_cart((2, 1)),
+    #     (grid.axis_arrays[0].ravel()[2], grid.axis_arrays[1].ravel()[1]),
+    # )
+    # print(grid.neighbors_from_grid((2, 1)))
+    # print(grid.neighbors_from_idx(41))
+
